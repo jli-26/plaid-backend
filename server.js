@@ -1,5 +1,6 @@
 const express = require('express');
 require('dotenv').config();
+const crypto = require('crypto'); 
 const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = require('plaid');
 const PORT = process.env.PORT || 3000;
 
@@ -25,19 +26,22 @@ const plaidClient = new PlaidApi(config);
 
 app.post('/create_link_token', async (req, res) => {
   try {
+    const hashedUserId = crypto          
+      .createHash('sha256')
+      .update(req.body.userId)
+      .digest('hex');
     const response = await plaidClient.linkTokenCreate({
-      user: { client_user_id: req.body.userId },
+      user: { client_user_id: hashedUserId },
       client_name: 'My App',
       products: [Products.Transactions],
       country_codes: [CountryCode.Us],
       language: 'en',
       android_package_name: 'com.example.myapplication'
     });
-
     res.json({ link_token: response.data.link_token });
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Error creating link token');
+    console.error('Plaid error:', err.response?.data || err.message);
+    res.status(500).json({ error: err.response?.data || err.message });
   }
 });
 
