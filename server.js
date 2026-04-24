@@ -1,9 +1,15 @@
 const express = require('express');
 require('dotenv').config();
 const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = require('plaid');
+const PORT = process.env.PORT || 3000;
+
+
 
 const app = express();
 app.use(express.json());
+
+const cors = require('cors');
+app.use(cors());
 
 const config = new Configuration({
   basePath: PlaidEnvironments.sandbox,
@@ -50,4 +56,4 @@ app.post('/exchange_token', async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log('Server running on port 3000'));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
