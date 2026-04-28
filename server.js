@@ -89,4 +89,68 @@ app.post('/transactions', async (req, res) => {
   }
 });
 
+app.post('/create_random_transaction', async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const { data: userData, error } = await supabase
+      .from('Users')
+      .select('userID')
+      .eq('email', userId)
+      .single();
+
+    if (error || !userData) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+
+    const merchants = [
+      "Starbucks",
+      "Amazon",
+      "Uber",
+      "McDonald's",
+      "Target",
+      "Netflix",
+      "Whole Foods",
+      "Chipotle",
+      "Spotify",
+      "Apple Store"
+    ];
+
+    const randomMerchant = merchants[Math.floor(Math.random() * merchants.length)];
+    const randomAmount = (Math.random() * 100 + 5).toFixed(2);
+
+    const today = new Date();
+    const randomDaysAgo = Math.floor(Math.random() * 30);
+    const date = new Date();
+    date.setDate(today.getDate() - randomDaysAgo);
+
+    const transaction = {
+        userID: userData.id,
+        label: randomMerchant,
+        amount: parseFloat(randomAmount),
+        transaction_type: 1, // expense 
+        merchant: randomMerchant,
+        merchantCategory: "mock",
+        dateOfTransaction: date.toISOString().split('T')[0],
+    };
+
+    // save to supa
+    const { error: insertError } = await supabase
+      .from('Transactions') 
+      .insert(transaction);
+
+    if (insertError) {
+      console.error(insertError);
+      return res.status(500).json({ error: 'Failed to insert transaction' });
+    }
+
+    res.json({ success: true, transaction });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
