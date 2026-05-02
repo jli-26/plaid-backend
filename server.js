@@ -20,15 +20,23 @@ const config = new Configuration({
     }
   }
 });
-const plaidClient = new PlaidApi(config);
 
+const plaidClient = new PlaidApi(config);
+console.log("Plaid Products transactions")
+console.log(Products.Transactions)
 app.post('/create_link_token', async (req, res) => {
+    
   try {
     const hashedUserId = crypto.createHash('sha256').update(req.body.userId).digest('hex');
     const response = await plaidClient.linkTokenCreate({
       user: { client_user_id: hashedUserId },
       client_name: 'My App',
       products: [Products.Transactions],
+      account_filters: {
+        depository: {
+            account_subtypes: ["checking", "savings"]
+        }
+      },
       country_codes: [CountryCode.Us],
       language: 'en',
       android_package_name: 'com.example.myapplication'
@@ -89,20 +97,20 @@ app.post('/transactions', async (req, res) => {
   }
 });
 
-app.post('/create_random_transaction', async (req, res) => {
+app.post('/trigger_random_plaid_expenses', async (req, res) => {
   try {
     const { userId } = req.body;
 
+
     const { data: userData, error } = await supabase
       .from('Users')
-      .select('userID')
+      .select('access_token')
       .eq('email', userId)
       .single();
 
-    if (error || !userData) {
-      return res.status(404).json({ error: 'User not found' });
+    if (error || !userData?.access_token) {
+      return res.status(404).json({ error: 'User or access token not found' });
     }
-
 
     const merchants = [
       "Starbucks",
@@ -118,38 +126,36 @@ app.post('/create_random_transaction', async (req, res) => {
     ];
 
     const randomMerchant = merchants[Math.floor(Math.random() * merchants.length)];
-    const randomAmount = (Math.random() * 100 + 5).toFixed(2);
-
+    const randomAmount = parseFloat((Math.random() * 100 + 5).toFixed(2));
+    console.log(randomMerchant + " " + randomAmount)
     const today = new Date();
-    const randomDaysAgo = Math.floor(Math.random() * 30);
+    const randomDaysAgo = Math.floor(Math.random() * 14); // Plaid limit = 14 days
     const date = new Date();
     date.setDate(today.getDate() - randomDaysAgo);
 
-    const transaction = {
-        userID: userData.id,
-        label: randomMerchant,
-        amount: parseFloat(randomAmount),
-        transaction_type: 1, // expense 
-        merchant: randomMerchant,
-        merchantCategory: "mock",
-        dateOfTransaction: date.toISOString().split('T')[0],
-    };
+    const isoDate = date.toISOString().split('T')[0];
 
-    // save to supa
-    const { error: insertError } = await supabase
-      .from('Transactions') 
-      .insert(transaction);
+    const plaidResponse = await plaidClient.sandboxTransactionsCreate({
+      access_token: userData.access_token,
+      transactions: [
+        {
+          amount: randomAmount,
+          date_posted: isoDate,
+          date_transacted: isoDate,
+          description: randomMerchant,
+          iso_currency_code: "USD"
+        }
+      ]
+    });
 
-    if (insertError) {
-      console.error(insertError);
-      return res.status(500).json({ error: 'Failed to insert transaction' });
-    }
-
-    res.json({ success: true, transaction });
+    res.json({
+      success: true,
+      plaid: plaidResponse.data
+    });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    console.error("Plaid sandbox error:", err.response?.data || err.message);
+    res.status(500).json({ error: err.response?.data || err.message });
   }
 });
 
