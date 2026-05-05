@@ -132,9 +132,8 @@ app.post('/trigger_random_plaid_expenses', async (req, res) => {
     const randomAmount = parseFloat((Math.random() * 100 + 5).toFixed(2));
     console.log(randomMerchant + " " + randomAmount)
     const today = new Date();
-    const randomDaysAgo = Math.floor(Math.random() * 5);
     const date = new Date();
-    date.setDate(today.getDate() - randomDaysAgo);
+    date.setDate(today.getDate());
 
     const isoDate = date.toISOString().split('T')[0];
 
