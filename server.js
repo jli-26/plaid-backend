@@ -171,4 +171,92 @@ app.post('/categories', async(req, res) =>{
 
 });
 
+app.post('/trigger_random_plaid_income', async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+
+    const { data: userData, error } = await supabase
+      .from('Users')
+      .select('access_token')
+      .eq('email', userId)
+      .single();
+
+    if (error || !userData?.access_token) {
+      return res.status(404).json({ error: 'User or access token not found' });
+    }
+
+    const incomeSources = [
+    "Employer Payroll",
+    "Direct Deposit",
+    "Salary",
+    "Hourly Wages",
+    "Freelance Payment",
+    "Contract Work",
+    "Consulting Income",
+    "Gig Work",
+    "Uber Driver Earnings",
+    "DoorDash Earnings",
+    "Tips",
+    "Bonus Payment",
+    "Commission",
+    "Refund",
+    "Cashback Reward",
+    "Interest Income",
+    "Dividend Payment",
+    "Investment Withdrawal",
+    "Venmo Payment Received",
+    "Zelle Payment Received",
+    "PayPal Transfer",
+    "Tax Refund",
+    "Government Benefit",
+    "Scholarship",
+    "Grant Disbursement",
+    "Financial Aid Refund",
+    "Family Transfer"
+    ];
+
+    const randomMerchant = incomeSources[Math.floor(Math.random() * merchants.length)];
+    const randomAmount = parseFloat((Math.random() * 1800 + 500).toFixed(2));
+    console.log(randomMerchant + " " + randomAmount)
+    const today = new Date();
+    const date = new Date();
+    date.setDate(today.getDate());
+
+    const isoDate = date.toISOString().split('T')[0];
+
+    const plaidResponse = await plaidClient.sandboxTransactionsCreate({
+      access_token: userData.access_token,
+      transactions: [
+        {
+          amount: -randomAmount, // negative is income
+          date_posted: isoDate,
+          date_transacted: isoDate,
+          description: randomMerchant,
+          iso_currency_code: "USD"
+        }
+      ]
+    });
+
+    res.json({
+      success: true,
+      plaid: plaidResponse.data
+    });
+
+  } catch (err) {
+    console.error("Plaid sandbox error:", err.response?.data || err.message);
+    res.status(500).json({ error: err.response?.data || err.message });
+  }
+});
+
+app.post('/categories', async(req, res) =>{
+    
+    const plaidResponse = await plaidClient.personal
+    res.json({
+        sucess: true,
+        categories: plaidResponse.data.categories
+    })
+
+});
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
