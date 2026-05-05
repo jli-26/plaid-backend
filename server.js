@@ -87,10 +87,13 @@ app.post('/transactions', async (req, res) => {
       transaction_id: tx.transaction_id,
       name: tx.name,
       amount: tx.amount,  
-      date: tx.date,
+      date: tx.date
     }));
 
-    res.json({ transactions });
+    res.json({ 
+        transactions : transactions,
+        num_transactions: transactions.length
+    });
   } catch (err) {
     console.error('Transactions error:', err.response?.data || err.message);
     res.status(500).json({ error: err.response?.data || err.message });
@@ -129,7 +132,7 @@ app.post('/trigger_random_plaid_expenses', async (req, res) => {
     const randomAmount = parseFloat((Math.random() * 100 + 5).toFixed(2));
     console.log(randomMerchant + " " + randomAmount)
     const today = new Date();
-    const randomDaysAgo = Math.floor(Math.random() * 14); // Plaid limit = 14 days
+    const randomDaysAgo = Math.floor(Math.random() * 5);
     const date = new Date();
     date.setDate(today.getDate() - randomDaysAgo);
 
@@ -157,6 +160,16 @@ app.post('/trigger_random_plaid_expenses', async (req, res) => {
     console.error("Plaid sandbox error:", err.response?.data || err.message);
     res.status(500).json({ error: err.response?.data || err.message });
   }
+});
+
+app.post('/categories', async(req, res) =>{
+    
+    const plaidResponse = await plaidClient.personal
+    res.json({
+        sucess: true,
+        categories: plaidResponse.data.categories
+    })
+
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
