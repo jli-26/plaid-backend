@@ -88,7 +88,7 @@ app.post('/transactions', async (req, res) => {
       name: tx.name,
       amount: tx.amount,  
       date: tx.date,
-      category: tx.personal_finance_category
+      category: tx.personal_finance_category?.detailed
     }));
 
     res.json({ 
